@@ -1,13 +1,12 @@
 from torch import cuda
-import torch
 from models.bert.bert_classification import BERTClass
+from utils.app_logger import AppLogger
 import numpy as np
 from sklearn.metrics import accuracy_score
-import json
-import time
-import os
+import json, time, os, torch
 
 device = 'cuda' if cuda.is_available() else 'cpu'
+logger = AppLogger.getInstance()
 
 
 def setup_model(number_of_classes):
@@ -27,6 +26,7 @@ def loss_fn(outputs, targets):
 
 
 def train(epoch, training_loader, model, optimizer, model_directory):
+    logger.debug("training started")
     start = time.time()
     model.train()
     unique_ids = np.array([])
