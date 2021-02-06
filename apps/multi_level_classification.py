@@ -6,29 +6,40 @@ import numpy as np
 
 from utils.file_utils import write_json_dict, read_json
 
-root_dir = "/home/charan/DATA/311_Data/Department/"
-final_data = os.path.join(root_dir, "311_VIZ_DESCRIPTION_PARENT.csv")
-write_json = os.path.join(root_dir, "class.json")
+root_dir = "/home/charan/DATA/311_Data/multi-level-classification"
+final_data = os.path.join(root_dir, "balanced_multi-level.csv")
+cat_json = os.path.join(root_dir, "category_class.json")
+type_json = os.path.join(root_dir, "type_class.json")
 load_model_path = ""
-label_dict = read_json(write_json)
+label_cat = read_json(cat_json)
+label_type = read_json(type_json)
+
+
+def get_classes(input_dict):
+    counter = 0
+    while str(counter) in input_dict:
+        counter += 1
+    return counter
 
 
 def setup_data(input_data):
-    input_data['label'] = input_data.PARENT_DEPT.apply(lambda x: label_dict[x])
-    input_data.rename(columns={"CASE ID": "u_id", "Description": "desc"}, inplace=True)
+    input_data['label1'] = input_data.PARENT_CATEGORY.apply(lambda x: label_cat[x])
+    input_data['label2'] = input_data.TYPE.apply(lambda x: label_type[x])
+    input_data['u_id'] = input_data.index
+    input_data.rename(columns={"Description": "desc"}, inplace=True)
     return input_data
 
 
 def train_classification():
     classification_df = pd.read_csv(final_data)
     classification_df = setup_data(classification_df)
-    number_of_classes = max(list(classification_df['label'].unique())) + 1
+    no_class_1 = get_classes(label_cat)
+    no_class_2 = get_classes(label_type)
     model_directory = os.path.join(root_dir, "classify_dict")
     metrics_json = os.path.join(root_dir, "accuracy_metrics.json")
-    training_loader, testing_loader = load_datasets(classification_df, train_size=0.8,
-                                                    number_of_classes=number_of_classes)
+    training_loader, testing_loader = load_datasets(classification_df, 0.8, no_class_1, no_class_2)
     unique_ids, val_targets, val_outputs = start_epochs(training_loader, testing_loader, metrics_json, model_directory,
-                                                        epochs=20, number_of_classes=number_of_classes)
+                                                        20, no_class_1, no_class_2)
     out_numpy = np.concatenate((unique_ids.reshape(-1, 1), val_targets.reshape(-1, 1), val_outputs.reshape(-1, 1)),
                                axis=1)
     predicted_df = pd.DataFrame(out_numpy, columns=['id', 'original', 'predicted'])
@@ -42,18 +53,6 @@ def inference_classification():
     out_numpy = np.concatenate((unique_ids.reshape(-1, 1), predictions.reshape(-1, 1)), axis=1)
     dept_df = pd.DataFrame(out_numpy, columns=['id', 'classification'])
     dept_df.to_csv(os.path.join(root_dir, "news_data/processed_sentiments.csv"), index=False, header=True)
-
-
-def stat_data():
-    viz_data = pd.read_csv(final_data)
-    print(viz_data.shape)
-    counter = 0
-    dict_vis = {}
-    for each in list(viz_data.VIS_STREET.unique()):
-        dict_vis[str(counter)] = each
-        dict_vis[each] = counter
-        counter += 1
-    write_json_dict(dict_vis, write_json)
 
 
 if __name__ == '__main__':

@@ -9,8 +9,8 @@ device = 'cuda' if cuda.is_available() else 'cpu'
 logger = AppLogger.getInstance()
 
 
-def setup_model(number_of_classes):
-    bert_model = BERTClass(number_of_classes=number_of_classes)
+def setup_model(no_class_1, no_class_2):
+    bert_model = BERTClass(no_class_1, no_class_2)
     bert_model.to(device)
     return bert_model
 
@@ -96,8 +96,8 @@ def remove_model_paths(best_epoch, model_path, total_epochs):
             os.remove(current_path)
 
 
-def start_epochs(training_loader, testing_loader, metrics_json, model_directory, epochs=3, number_of_classes=16):
-    model = setup_model(number_of_classes)
+def start_epochs(training_loader, testing_loader, metrics_json, model_directory, epochs, no_class_1, no_class_2):
+    model = setup_model(no_class_1, no_class_2)
     optimizer = get_optimizer(model)
     accuracy_map = {}
     best_val_accuracy = 0
@@ -129,6 +129,4 @@ def load_model(model_file, testing_loader, number_of_classes):
     model = setup_model(number_of_classes)
     model.load_state_dict(torch.load(model_file))
     unique_ids, val_targets, val_outputs, inference_time = validation(1, testing_loader, model)
-    # validation_accuracy = accuracy_score(val_targets, val_outputs) * 100
-    # print('Epoch {} - accuracy {} - Inference time {} '.format(1, validation_accuracy, inference_time))
     return unique_ids, val_outputs
