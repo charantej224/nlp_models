@@ -72,8 +72,10 @@ def train(epoch, training_loader, model, optimizer, model_directory):
 def validation(epoch, testing_loader, model):
     start = time.time()
     model.eval()
-    validation_targets = np.array([])
-    validation_outputs = np.array([])
+    val_targets_1 = np.array([])
+    val_outputs_1 = np.array([])
+    val_targets_2 = np.array([])
+    val_outputs_2 = np.array([])
     unique_ids = np.array([])
     print(f'Epoch - Inference : {epoch}')
     counter = 0
@@ -87,17 +89,17 @@ def validation(epoch, testing_loader, model):
             target2 = data['target2'].to(device, dtype=torch.float)
             desc = data['text']
             output1, output2 = model(ids, mask, token_type_ids, desc)
-            validation_target1 = np.append(validation_targets, np.argmax(target1.cpu().numpy(), axis=1))
-            validation_outputs1 = np.append(validation_outputs, np.argmax(output1.cpu().numpy(), axis=1))
-            validation_target2 = np.append(validation_targets, np.argmax(target2.cpu().numpy(), axis=1))
-            validation_outputs2 = np.append(validation_outputs, np.argmax(output2.cpu().numpy(), axis=1))
+            val_targets_1 = np.append(val_targets_1, np.argmax(target1.cpu().numpy(), axis=1))
+            val_outputs_1 = np.append(val_outputs_1, np.argmax(output1.cpu().numpy(), axis=1))
+            val_targets_2 = np.append(val_targets_2, np.argmax(target2.cpu().numpy(), axis=1))
+            val_outputs_2 = np.append(val_outputs_2, np.argmax(output2.cpu().numpy(), axis=1))
             unique_ids = np.append(unique_ids, data['u_id'])
             counter = counter + len(data)
             if counter % 100 == 0:
                 print(f" Epoch - {epoch} - current Inference {counter / 4} / {total}")
     done = time.time()
     elapsed = (done - start) / 60
-    return unique_ids, validation_target1, validation_outputs1, validation_target2, validation_outputs2, elapsed
+    return unique_ids, val_targets_1, val_outputs_1, val_targets_2, val_outputs_2, elapsed
 
 
 def remove_model_paths(best_epoch, model_path, total_epochs):
@@ -118,8 +120,7 @@ def start_epochs(training_loader, testing_loader, metrics_json, model_directory,
     for epoch in range(epochs):
         predicted = os.path.join(root_dir, f"predicted_{epoch}.csv")
         unique_ids, targets_1, outputs_1, targets_2, outputs_2, elapsed = train(epoch, training_loader, model,
-                                                                                optimizer,
-                                                                                model_directory)
+                                                                                optimizer,model_directory)
         cls1_train_accuracy = accuracy_score(targets_1, outputs_1) * 100
         cls2_train_accuracy = accuracy_score(targets_2, outputs_2) * 100
         print(f'Epoch {epoch} - classifier1 {cls1_train_accuracy} % -classifier2 {cls2_train_accuracy} %')
@@ -135,9 +136,7 @@ def start_epochs(training_loader, testing_loader, metrics_json, model_directory,
         accuracy_map[f"val_cls2_{str(epoch)}"] = cls2_validation_accuracy
         accuracy_map[f"train_time_{str(epoch)}"] = elapsed
         accuracy_map[f"val_time_{str(epoch)}"] = val_elapsed
-        val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2 = val_unique_ids.reshape(-1,
-                                                                                                      1), val_target1.reshape(
-            -1, 1), val_outputs1.reshape(-1, 1), val_target2.reshape(-1, 1), val_outputs2.reshape(-1, 1)
+        val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2 = val_unique_ids.reshape(-1, 1), val_target1.reshape(-1, 1), val_outputs1.reshape(-1, 1), val_target2.reshape(-1, 1), val_outputs2.reshape(-1, 1)
 
         out_numpy = np.concatenate((val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2), axis=1)
         predicted_df = pd.DataFrame(out_numpy, columns=['id', 'original_cls1', 'predicted_cls1', 'original_cls2',
