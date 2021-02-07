@@ -85,7 +85,8 @@ def validation(epoch, testing_loader, model):
             token_type_ids = data['token_type_ids'].to(device, dtype=torch.long)
             target1 = data['target1'].to(device, dtype=torch.float)
             target2 = data['target2'].to(device, dtype=torch.float)
-            output1, output2 = model(ids, mask, token_type_ids)
+            desc = data['text']
+            output1, output2 = model(ids, mask, token_type_ids, desc)
             validation_target1 = np.append(validation_targets, np.argmax(target1.cpu().numpy(), axis=1))
             validation_outputs1 = np.append(validation_outputs, np.argmax(output1.cpu().numpy(), axis=1))
             validation_target2 = np.append(validation_targets, np.argmax(target2.cpu().numpy(), axis=1))
@@ -122,8 +123,9 @@ def start_epochs(training_loader, testing_loader, metrics_json, model_directory,
         cls1_train_accuracy = accuracy_score(targets_1, outputs_1) * 100
         cls2_train_accuracy = accuracy_score(targets_2, outputs_2) * 100
         print(f'Epoch {epoch} - classifier1 {cls1_train_accuracy} % -classifier2 {cls2_train_accuracy} %')
-        val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2, val_elapsed = validation(epoch, testing_loader,
-                                                                                               model)
+        val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2, val_elapsed = validation(epoch,
+                                                                                                       testing_loader,
+                                                                                                       model)
         cls1_validation_accuracy = accuracy_score(val_target1, val_outputs1) * 100
         cls2_validation_accuracy = accuracy_score(val_target2, val_outputs2) * 100
         print(f'Epoch {epoch} - val classifier1 {cls1_validation_accuracy} val classifier2 {cls2_validation_accuracy}')
@@ -133,10 +135,13 @@ def start_epochs(training_loader, testing_loader, metrics_json, model_directory,
         accuracy_map[f"val_cls2_{str(epoch)}"] = cls2_validation_accuracy
         accuracy_map[f"train_time_{str(epoch)}"] = elapsed
         accuracy_map[f"val_time_{str(epoch)}"] = val_elapsed
-        val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2 = val_unique_ids.reshape(-1, 1), val_target1.reshape(-1, 1), val_outputs1.reshape(-1, 1), val_target2.reshape(-1, 1), val_outputs2.reshape(-1, 1)
+        val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2 = val_unique_ids.reshape(-1,
+                                                                                                      1), val_target1.reshape(
+            -1, 1), val_outputs1.reshape(-1, 1), val_target2.reshape(-1, 1), val_outputs2.reshape(-1, 1)
 
-        out_numpy = np.concatenate((val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2),axis=1)
-        predicted_df = pd.DataFrame(out_numpy, columns=['id', 'original_cls1', 'predicted_cls1','original_cls2', 'predicted_cls2'])
+        out_numpy = np.concatenate((val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2), axis=1)
+        predicted_df = pd.DataFrame(out_numpy, columns=['id', 'original_cls1', 'predicted_cls1', 'original_cls2',
+                                                        'predicted_cls2'])
         predicted_df.to_csv(predicted, index=False)
 
     with open(metrics_json, 'w') as f:
