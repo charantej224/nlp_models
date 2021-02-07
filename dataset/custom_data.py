@@ -48,5 +48,6 @@ class CustomDataset(Dataset):
             'token_type_ids': torch.tensor(token_type_ids, dtype=torch.long),
             'target1': target1,
             'target2': target2,
-            'u_id': self.unique_ids[index]
+            'u_id': self.unique_ids[index],
+            'text': desc_text
         }
