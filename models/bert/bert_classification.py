@@ -15,10 +15,13 @@ class BERTClass(torch.nn.Module):
         self.classifier2 = BERTClass.get_classifier(no_class_2)
         self.label_cat = label_cat
 
-    def forward(self, ids, mask, token_type_ids, desc):
+    def forward(self, ids, mask, token_type_ids, desc, outputs, is_training=True):
         _, output_1 = self.bert(ids, attention_mask=mask, token_type_ids=token_type_ids)
         output_csl1 = self.classifier1(output_1)
-        level_ids, level_mask, level_token = self.get_inputs(output_csl1, desc)
+        if is_training:
+            level_ids, level_mask, level_token = self.get_inputs(outputs, desc)
+        else:
+            level_ids, level_mask, level_token = self.get_inputs(output_csl1, desc)
         _, output_2 = self.bert(level_ids, attention_mask=level_mask, token_type_ids=level_token)
         output_csl2 = self.classifier2(output_2)
         return output_csl1, output_csl2
@@ -44,7 +47,8 @@ class BERTClass(torch.nn.Module):
             ten_ids, ten_mask, ten_token = list_ids.append(ids), list_mask.append(mask), list_token.append(token)
         ten_ids, ten_mask, ten_token = torch.stack(list_ids), torch.stack(list_mask), torch.stack(list_token)
         ten_ids, ten_mask, ten_token = ten_ids.to(device, dtype=torch.long), ten_mask.to(device,
-                                                                                         dtype=torch.long), ten_token.to(device, dtype=torch.long)
+                                                                                         dtype=torch.long), ten_token.to(
+            device, dtype=torch.long)
         return ten_ids, ten_mask, ten_token
 
     def get_ids(self, desc_text):

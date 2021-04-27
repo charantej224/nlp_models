@@ -39,7 +39,7 @@ def train_classification():
     metrics_json = os.path.join(root_dir, "accuracy_metrics.json")
     training_loader, testing_loader = load_datasets(classification_df, 0.8, no_class_1, no_class_2)
     unique_ids, val_targets, val_outputs = start_epochs(training_loader, testing_loader, metrics_json, model_directory,
-                                                        20, no_class_1, no_class_2, label_cat, label_type)
+                                                        50, no_class_1, no_class_2, label_cat, label_type)
     out_numpy = np.concatenate((unique_ids.reshape(-1, 1), val_targets.reshape(-1, 1), val_outputs.reshape(-1, 1)),
                                axis=1)
     predicted_df = pd.DataFrame(out_numpy, columns=['id', 'original', 'predicted'])

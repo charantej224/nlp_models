@@ -45,7 +45,7 @@ def train(epoch, training_loader, model, optimizer, model_directory):
         target1 = data['target1'].to(device, dtype=torch.float)
         target2 = data['target2'].to(device, dtype=torch.float)
         desc = data['text']
-        output1, output2 = model(ids, mask, token_type_ids, desc)
+        output1, output2 = model(ids, mask, token_type_ids, desc, target1)
         optimizer.zero_grad()
         loss1 = loss_fn(output1, target1)
         loss2 = loss_fn(output2, target2)
@@ -88,7 +88,7 @@ def validation(epoch, testing_loader, model):
             target1 = data['target1'].to(device, dtype=torch.float)
             target2 = data['target2'].to(device, dtype=torch.float)
             desc = data['text']
-            output1, output2 = model(ids, mask, token_type_ids, desc)
+            output1, output2 = model(ids, mask, token_type_ids, desc, None, is_training=False)
             val_targets_1 = np.append(val_targets_1, np.argmax(target1.cpu().numpy(), axis=1))
             val_outputs_1 = np.append(val_outputs_1, np.argmax(output1.cpu().numpy(), axis=1))
             val_targets_2 = np.append(val_targets_2, np.argmax(target2.cpu().numpy(), axis=1))
@@ -120,7 +120,7 @@ def start_epochs(training_loader, testing_loader, metrics_json, model_directory,
     for epoch in range(epochs):
         predicted = os.path.join(root_dir, f"predicted_{epoch}.csv")
         unique_ids, targets_1, outputs_1, targets_2, outputs_2, elapsed = train(epoch, training_loader, model,
-                                                                                optimizer,model_directory)
+                                                                                optimizer, model_directory)
         cls1_train_accuracy = accuracy_score(targets_1, outputs_1) * 100
         cls2_train_accuracy = accuracy_score(targets_2, outputs_2) * 100
         print(f'Epoch {epoch} - classifier1 {cls1_train_accuracy} % -classifier2 {cls2_train_accuracy} %')
@@ -136,16 +136,17 @@ def start_epochs(training_loader, testing_loader, metrics_json, model_directory,
         accuracy_map[f"val_cls2_{str(epoch)}"] = cls2_validation_accuracy
         accuracy_map[f"train_time_{str(epoch)}"] = elapsed
         accuracy_map[f"val_time_{str(epoch)}"] = val_elapsed
-        val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2 = val_unique_ids.reshape(-1, 1), val_target1.reshape(-1, 1), val_outputs1.reshape(-1, 1), val_target2.reshape(-1, 1), val_outputs2.reshape(-1, 1)
+        val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2 = val_unique_ids.reshape(-1,
+                                                                                                      1), val_target1.reshape(
+            -1, 1), val_outputs1.reshape(-1, 1), val_target2.reshape(-1, 1), val_outputs2.reshape(-1, 1)
 
         out_numpy = np.concatenate((val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2), axis=1)
         predicted_df = pd.DataFrame(out_numpy, columns=['id', 'original_cls1', 'predicted_cls1', 'original_cls2',
                                                         'predicted_cls2'])
         predicted_df.to_csv(predicted, index=False)
-
-    with open(metrics_json, 'w') as f:
-        json.dump(accuracy_map, f, indent=2)
-        f.close()
+        with open(metrics_json, 'w') as f:
+            json.dump(accuracy_map, f, indent=2)
+            f.close()
 
 
 def load_model(model_file, testing_loader, number_of_classes):
