@@ -8,11 +8,11 @@ import pandas as pd
 
 device = 'cuda' if cuda.is_available() else 'cpu'
 logger = AppLogger.getInstance()
-root_dir = "/home/charan/DATA/311_Data/multi-level-classification"
+root_dir = "/home/charan/DATA/Data/DB_Pedia/archive/multi_level_classification"
 
 
-def setup_model(no_class_1, no_class_2, label_cat, label_type):
-    bert_model = BERTClass(no_class_1, no_class_2, label_cat)
+def setup_model(no_class_1, no_class_2, label_l1, label_l2):
+    bert_model = BERTClass(no_class_1, no_class_2, label_l1)
     bert_model.to(device)
     return bert_model
 
@@ -45,7 +45,7 @@ def train(epoch, training_loader, model, optimizer, model_directory):
         target1 = data['target1'].to(device, dtype=torch.float)
         target2 = data['target2'].to(device, dtype=torch.float)
         desc = data['text']
-        output1, output2 = model(ids, mask, token_type_ids, desc, target1)
+        output1, output2 = model(ids, mask, token_type_ids, desc, target1, is_training=True)
         optimizer.zero_grad()
         loss1 = loss_fn(output1, target1)
         loss2 = loss_fn(output2, target2)
@@ -113,8 +113,8 @@ def remove_model_paths(best_epoch, model_path, total_epochs):
 
 
 def start_epochs(training_loader, testing_loader, metrics_json, model_directory, epochs, no_class_1, no_class_2,
-                 label_cat, label_type):
-    model = setup_model(no_class_1, no_class_2, label_cat, label_type)
+                 labels_l1, labels_l2):
+    model = setup_model(no_class_1, no_class_2, labels_l1, labels_l2)
     optimizer = get_optimizer(model)
     accuracy_map = {}
     for epoch in range(epochs):
@@ -136,10 +136,9 @@ def start_epochs(training_loader, testing_loader, metrics_json, model_directory,
         accuracy_map[f"val_cls2_{str(epoch)}"] = cls2_validation_accuracy
         accuracy_map[f"train_time_{str(epoch)}"] = elapsed
         accuracy_map[f"val_time_{str(epoch)}"] = val_elapsed
-        val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2 = val_unique_ids.reshape(-1,
-                                                                                                      1), val_target1.reshape(
-            -1, 1), val_outputs1.reshape(-1, 1), val_target2.reshape(-1, 1), val_outputs2.reshape(-1, 1)
-
+        val_unique_ids = val_unique_ids.reshape(-1, 1)
+        val_target1, val_outputs1 = val_target1.reshape(-1, 1), val_outputs1.reshape(-1, 1)
+        val_target2, val_outputs2 = val_target2.reshape(-1, 1), val_outputs2.reshape(-1, 1)
         out_numpy = np.concatenate((val_unique_ids, val_target1, val_outputs1, val_target2, val_outputs2), axis=1)
         predicted_df = pd.DataFrame(out_numpy, columns=['id', 'original_cls1', 'predicted_cls1', 'original_cls2',
                                                         'predicted_cls2'])

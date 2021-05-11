@@ -16,14 +16,17 @@ class BERTClass(torch.nn.Module):
         self.label_cat = label_cat
 
     def forward(self, ids, mask, token_type_ids, desc, outputs, is_training=True):
-        _, output_1 = self.bert(ids, attention_mask=mask, token_type_ids=token_type_ids)
-        output_csl1 = self.classifier1(output_1)
         if is_training:
             level_ids, level_mask, level_token = self.get_inputs(outputs, desc)
+            _, output_2 = self.bert(level_ids, attention_mask=level_mask, token_type_ids=level_token)
+            output_csl1 = self.classifier1(output_2)
+            output_csl2 = self.classifier2(output_2)
         else:
+            _, output_1 = self.bert(ids, attention_mask=mask, token_type_ids=token_type_ids)
+            output_csl1 = self.classifier1(output_1)
             level_ids, level_mask, level_token = self.get_inputs(output_csl1, desc)
-        _, output_2 = self.bert(level_ids, attention_mask=level_mask, token_type_ids=level_token)
-        output_csl2 = self.classifier2(output_2)
+            _, output_2 = self.bert(level_ids, attention_mask=level_mask, token_type_ids=level_token)
+            output_csl2 = self.classifier2(output_2)
         return output_csl1, output_csl2
 
     @staticmethod

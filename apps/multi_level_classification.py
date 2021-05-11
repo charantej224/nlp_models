@@ -4,15 +4,17 @@ import os
 import pandas as pd
 import numpy as np
 
-from utils.file_utils import write_json_dict, read_json
+from utils.file_utils import read_json
 
-root_dir = "/home/charan/DATA/311_Data/multi-level-classification"
+# root_dir = "/home/charan/DATA/Data/DB_Pedia/archive/multi-level-train-tuned"
+root_dir = "/home/charan/DATA/311_Data/multi-level-feature-extracted"
 final_data = os.path.join(root_dir, "balanced_multi-level.csv")
-cat_json = os.path.join(root_dir, "category_class.json")
-type_json = os.path.join(root_dir, "type_class.json")
+final_data_updated = os.path.join(root_dir, "balanced_multi-level_updated.csv")
+l1_json = os.path.join(root_dir, "l1.json")
+l2_json = os.path.join(root_dir, "l2.json")
 load_model_path = ""
-label_cat = read_json(cat_json)
-label_type = read_json(type_json)
+l1_json = read_json(l1_json)
+l2_json = read_json(l2_json)
 
 
 def get_classes(input_dict):
@@ -23,27 +25,24 @@ def get_classes(input_dict):
 
 
 def setup_data(input_data):
-    input_data['label1'] = input_data.PARENT_CATEGORY.apply(lambda x: label_cat[x])
-    input_data['label2'] = input_data.TYPE.apply(lambda x: label_type[x])
+    input_data.rename(columns={"Description": "desc", "PARENT_CATEGORY": "l1", "TYPE": "l2", }, inplace=True)
+    input_data['label1'] = input_data["l1"].apply(lambda x: l1_json[x])
+    input_data['label2'] = input_data["l2"].apply(lambda x: l2_json[x])
     input_data['u_id'] = input_data.index
-    input_data.rename(columns={"Description": "desc"}, inplace=True)
+    input_data.to_csv(final_data_updated, index=False)
     return input_data
 
 
 def train_classification():
     classification_df = pd.read_csv(final_data)
     classification_df = setup_data(classification_df)
-    no_class_1 = get_classes(label_cat)
-    no_class_2 = get_classes(label_type)
+    no_class_1 = get_classes(l1_json)
+    no_class_2 = get_classes(l2_json)
     model_directory = os.path.join(root_dir, "classify_dict")
     metrics_json = os.path.join(root_dir, "accuracy_metrics.json")
     training_loader, testing_loader = load_datasets(classification_df, 0.8, no_class_1, no_class_2)
-    unique_ids, val_targets, val_outputs = start_epochs(training_loader, testing_loader, metrics_json, model_directory,
-                                                        50, no_class_1, no_class_2, label_cat, label_type)
-    out_numpy = np.concatenate((unique_ids.reshape(-1, 1), val_targets.reshape(-1, 1), val_outputs.reshape(-1, 1)),
-                               axis=1)
-    predicted_df = pd.DataFrame(out_numpy, columns=['id', 'original', 'predicted'])
-    predicted_df.to_csv(os.path.join(root_dir, "predicted.csv"), index=False, header=True)
+    start_epochs(training_loader, testing_loader, metrics_json, model_directory, 50, no_class_1, no_class_2, l1_json,
+                 l2_json)
 
 
 def inference_classification():
