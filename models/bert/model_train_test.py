@@ -148,8 +148,8 @@ def start_epochs(training_loader, testing_loader, metrics_json, model_directory,
             f.close()
 
 
-def load_model(model_file, testing_loader, number_of_classes):
-    model = setup_model(number_of_classes)
+def load_model(model_file, testing_loader, no_class_1, no_class_2, label_l1, label_l2):
+    model = setup_model(no_class_1, no_class_2, label_l1, label_l2)
     model.load_state_dict(torch.load(model_file))
-    unique_ids, val_targets, val_outputs, inference_time = validation(1, testing_loader, model)
-    return unique_ids, val_outputs
+    unique_ids, val_targets_1, val_outputs_1, val_targets_2, val_outputs_2, elapsed = validation(1, testing_loader, model)
+    return unique_ids, val_targets_1, val_outputs_1, val_targets_2, val_outputs_2

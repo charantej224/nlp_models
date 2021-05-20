@@ -6,13 +6,13 @@ import numpy as np
 
 from utils.file_utils import read_json
 
-# root_dir = "/home/charan/DATA/Data/DB_Pedia/archive/multi-level-train-tuned"
-root_dir = "/home/charan/DATA/311_Data/multi-level-feature-extracted"
-final_data = os.path.join(root_dir, "balanced_multi-level.csv")
-final_data_updated = os.path.join(root_dir, "balanced_multi-level_updated.csv")
+root_dir = "/home/charan/DATA/Data/DB_Pedia/archive/multi-level-train-tuned"
+# root_dir = "/home/charan/DATA/311_Data/multi-level-feature-extracted"
+final_data = os.path.join(root_dir, "DBP_wiki_data_scaled_updated.csv")
+final_data_updated = os.path.join(root_dir, "DBP_wiki_data_scaled_updated.csv")
 l1_json = os.path.join(root_dir, "l1.json")
 l2_json = os.path.join(root_dir, "l2.json")
-load_model_path = ""
+load_model_path = "/home/charan/DATA/Data/DB_Pedia/archive/multi-level-train-tuned/classify_dict_6.pt"
 l1_json = read_json(l1_json)
 l2_json = read_json(l2_json)
 
@@ -46,16 +46,19 @@ def train_classification():
 
 
 def inference_classification():
-    inference_df = pd.read_csv(final_data)
-    test_loader = load_test_datasets(inference_df, 3)
-    unique_ids, predictions = load_model(load_model_path, test_loader, 3)
-    out_numpy = np.concatenate((unique_ids.reshape(-1, 1), predictions.reshape(-1, 1)), axis=1)
-    dept_df = pd.DataFrame(out_numpy, columns=['id', 'classification'])
-    dept_df.to_csv(os.path.join(root_dir, "news_data/processed_sentiments.csv"), index=False, header=True)
+    inference_df = pd.read_csv(final_data_updated)
+    no_class_1 = get_classes(l1_json)
+    no_class_2 = get_classes(l2_json)
+    training_loader, testing_loader = load_datasets(inference_df, 0.8, no_class_1, no_class_2)
+    unique_ids, val_targets_1, val_outputs_1, val_targets_2, val_outputs_2 = load_model(load_model_path, testing_loader,
+                                                                                        no_class_1, no_class_2, l1_json,
+                                                                                        l2_json)
+    out_numpy = np.concatenate((unique_ids.reshape(-1, 1), val_targets_1.reshape(-1, 1), val_outputs_1.reshape(-1, 1),
+                                val_targets_2.reshape(-1, 1), val_outputs_2.reshape(-1, 1)), axis=1)
+    output_df = pd.DataFrame(out_numpy,
+                             columns=['id', 'original_cls1', 'predicted_cls1', 'original_cls2', 'predicted_cls2'])
+    output_df.to_csv(os.path.join(root_dir, "predicted.csv"), index=False, header=True)
 
 
 if __name__ == '__main__':
-    train_classification()
-
-# load_model_path = os.path.join(root_dir, 'prob_state_dict2.pt')
-# load_model(load_model_path, training_loader, testing_loader)
+    inference_classification()
