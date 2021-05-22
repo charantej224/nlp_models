@@ -8,7 +8,7 @@ import pandas as pd
 
 device = 'cuda' if cuda.is_available() else 'cpu'
 logger = AppLogger.getInstance()
-root_dir = "/home/charan/DATA/311_Data/multi-level-classification"
+root_dir = "/home/charan/DATA/311_Data/multi-level-tuned"
 
 
 def setup_model(no_class_1, no_class_2, label_cat, label_type):
